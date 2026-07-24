@@ -6,7 +6,7 @@
 
 I/O 契约：每个子命令 stdout 只输出一个 JSON 对象
   {"ok": bool, "action": str, "data": {...}, "errors": [...], "warnings": [...]}
-日志走 stderr。唯一第三方依赖：requests。
+日志走 stderr。只用 Python 标准库，零第三方依赖。
 """
 import argparse
 import base64
@@ -19,6 +19,9 @@ import shutil
 import sys
 import tempfile
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -36,12 +39,6 @@ def emit(action, ok, data=None, errors=None, warnings=None):
     }, ensure_ascii=False, default=str))
     sys.exit(0 if ok else 1)
 
-
-try:
-    import requests
-except ImportError:
-    emit("init", False, errors=[{"code": "MISSING_DEPENDENCY",
-                                 "message": "缺少 requests 库，请先运行: pip install requests"}])
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
 BASE_HOST = "https://base-api.feishu.cn"
@@ -204,18 +201,40 @@ class BitableClient:
         m2 = re.search(r"[?&]table=([A-Za-z0-9]+)", table_url)
         self.url_table_id = m2.group(1) if m2 else None
         self.base_url = "%s/open-apis/bitable/v1/apps/%s" % (BASE_HOST, self.app_token)
-        self.session = requests.Session()
-        self.session.trust_env = False
-        self.session.headers.update({"Authorization": "Bearer " + auth_code})
+        # 空 ProxyHandler = 不走系统代理（等价于 requests 的 trust_env=False）
+        self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        self.auth_headers = {"Authorization": "Bearer " + auth_code}
 
-    def request(self, method, url, json_body=None, params=None, data=None,
-                files=None, timeout=60):
+    def _http(self, method, url, body_bytes=None, extra_headers=None, timeout=60):
+        """发一次 HTTP 请求，返回解析后的 JSON（HTTP 错误码的 JSON 错误体也正常返回）。"""
+        headers = dict(self.auth_headers)
+        if extra_headers:
+            headers.update(extra_headers)
+        req = urllib.request.Request(url, data=body_bytes, method=method, headers=headers)
+        try:
+            with self.opener.open(req, timeout=timeout) as resp:
+                raw = resp.read()
+        except urllib.error.HTTPError as e:
+            raw = e.read()
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except Exception:
+            raise BitableError(-1, "接口返回非 JSON 内容：%r" % raw[:200])
+
+    def request(self, method, url, json_body=None, params=None, timeout=60):
+        if params:
+            url = url + "?" + urllib.parse.urlencode(params)
+        body_bytes = None
+        extra = None
+        if json_body is not None:
+            body_bytes = json.dumps(json_body, ensure_ascii=False).encode("utf-8")
+            extra = {"Content-Type": "application/json"}
         last = None
         for attempt in range(5):
             try:
-                resp = self.session.request(method, url, json=json_body, params=params,
-                                            data=data, files=files, timeout=timeout)
-                body = resp.json()
+                body = self._http(method, url, body_bytes, extra, timeout)
+            except BitableError as e:
+                raise
             except Exception as e:
                 last = e
                 time.sleep(1 + attempt)
@@ -304,17 +323,30 @@ class BitableClient:
                             % (self.base_url, table_id), json_body=body)
 
     def upload_media(self, path, upload_name, parent_type):
-        size = os.path.getsize(path)
-        url = BASE_HOST + "/open-apis/drive/v1/medias/upload_all"
         with open(path, "rb") as f:
-            resp = self.session.post(url, data={
-                "file_name": upload_name,
-                "parent_type": parent_type,
-                "parent_node": self.app_token,
-                "size": str(size),
-                "extra": json.dumps({"drive_route_token": self.app_token}),
-            }, files={"file": (upload_name, f)}, timeout=300)
-        body = resp.json()
+            content = f.read()
+        fields = {
+            "file_name": upload_name,
+            "parent_type": parent_type,
+            "parent_node": self.app_token,
+            "size": str(len(content)),
+            "extra": json.dumps({"drive_route_token": self.app_token}),
+        }
+        boundary = "----xhsskill%d" % int(time.time() * 1000)
+        parts = []
+        for k, v in fields.items():
+            parts.append(("--%s\r\nContent-Disposition: form-data; name=\"%s\""
+                          "\r\n\r\n%s\r\n" % (boundary, k, v)).encode("utf-8"))
+        parts.append(("--%s\r\nContent-Disposition: form-data; name=\"file\"; "
+                      "filename=\"%s\"\r\nContent-Type: application/octet-stream"
+                      "\r\n\r\n" % (boundary, upload_name)).encode("utf-8"))
+        parts.append(content)
+        parts.append(("\r\n--%s--\r\n" % boundary).encode("utf-8"))
+        body = self._http(
+            "POST", BASE_HOST + "/open-apis/drive/v1/medias/upload_all",
+            b"".join(parts),
+            {"Content-Type": "multipart/form-data; boundary=%s" % boundary},
+            timeout=300)
         if body.get("code") != 0:
             raise BitableError(body.get("code"), body.get("msg", ""))
         return body["data"]["file_token"]

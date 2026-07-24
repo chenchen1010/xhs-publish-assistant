@@ -5,14 +5,15 @@ description: 小红书笔记上传到飞书多维表格发布队列（影刀RPA�
 
 # 小红书笔记上传（xhs-note-upload）
 
-所有对表格的读写都通过本 skill 的脚本完成，脚本路径：
-`%USERPROFILE%\.claude\skills\xhs-note-upload\scripts\xhs_bitable.py`（下称「脚本」）。
+所有对表格的读写都通过本 skill 的脚本完成，脚本路径：本 skill 目录下的
+`scripts\xhs_bitable.py`（下称「脚本」；Claude Code 用户通常位于
+`%USERPROFILE%\.claude\skills\xhs-note-upload\`，其它助手按仓库实际所在目录）。
 
 每个子命令的 **stdout 是且只是一个 JSON 对象** `{"ok", "action", "data", "errors", "warnings"}`，stderr 是过程日志。只解析 stdout 的 JSON 作为结果；`errors[].message` 已是可直接展示给用户的中文。
 
 ## §0 预检（每次会话第一次用本 skill 时执行）
 
-1. 确认 Python 可用：`python --version`（不行再试 `py -3 --version`）。若缺 `requests`，征得用户同意后 `pip install requests`。
+1. 确认 Python 3 可用：`python --version`（Windows 上不行再试 `py -3 --version`，macOS 用 `python3`）。脚本只用标准库，无需安装任何第三方依赖。
 2. 运行 `python <脚本> check-config`：
    - `ok:true` → 记住它输出的表格信息，继续。
    - `CONFIG_MULTIPLE` → 把 `data.candidates` 列给用户选，之后所有命令都带 `--config <所选路径>`。

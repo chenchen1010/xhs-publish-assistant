@@ -1,8 +1,8 @@
-# xhs-note-upload — 小红书笔记上传 Skill（Claude Code）
+# xhs-note-upload — 小红书笔记上传 Skill
 
-把下面这段话直接复制给 Claude Code，它会替你完成安装和验证：
+把下面这段话直接复制给你的 AI 编程助手（Claude Code、Codex、Work Buddy 都可以），它会替你完成安装和验证：
 
-> 请安装并使用 https://github.com/chenchen1010/xhs-note-upload 这个仓库的 Skill（小红书笔记上传到飞书多维表格发布队列）。只处理我本人电脑上的文件和我自己的飞书表格授权码。请先完成平台识别、Python 和 requests 依赖检查，把 Skill 装到我的 Claude Code skills 目录，然后运行 check-config 验证能连上我的表格；找不到配置就引导我提供表格链接和授权码。验证成功后再问我要发布什么笔记。过程中不要上传或打印我的授权码。
+> 请安装并使用 https://github.com/chenchen1010/xhs-note-upload 这个仓库的 Skill：把小红书笔记上传到我的飞书多维表格发布队列。只处理我本人电脑上的文件和我自己的表格授权码。请把仓库下载到本地，完成必要的环境检查，然后按仓库里 SKILL.md 的流程执行：先运行 check-config 验证能连上我的表格，找不到配置就引导我提供表格链接和授权码。验证成功后再问我要发布什么笔记。过程中不要上传或打印我的授权码。
 
 ## 它解决什么问题
 
@@ -13,43 +13,38 @@
 - 不小心改了字段名，RPA 直接找不到数据
 - 留下空行、半成品行——RPA 的拉取条件是「发布任务提交时间为空且未发布」，这些行会被拉走并报错
 
-装上这个 Skill 后，你不再碰表格：跟 Claude 对话，它替你校验（标题长度、标签拆分、账号是否存在、图片顺序），预览给你确认，然后写进表格。另外附带三个维护功能：模板体检/修复、标签脏选项清理、待发布队列体检。
+装上这个 Skill 后，你不再碰表格：跟 AI 助手对话，它替你校验（标题长度、标签拆分、账号是否存在、图片顺序），预览给你确认，然后写进表格。另外附带三个维护功能：模板体检/修复、标签脏选项清理、待发布队列体检。
 
 ## 前置条件
 
 - 你已经在用这套发布应用，电脑上有它的 `config.json`（内含表格链接 `table_url` 和 `pt-` 开头的授权码 `auth_code`，通常在 `桌面/影刀文件夹/小红书发布/图文发布/` 里）
-- Claude Code（命令行版或桌面版）
-- Python 3.7+，以及 `requests` 库（`pip install requests`）
+- 任意一个能执行命令的 AI 编程助手：Claude Code / Codex / Work Buddy 等
+- Python 3（脚本只用标准库，**不需要 pip 安装任何第三方库**；macOS 自带 python3，Windows 没有的话让助手帮你装）
 
 ## 安装
 
-**Windows**（命令行执行）：
+**用 Claude Code**：装进 skills 目录后说到发笔记就会自动触发。
 
 ```
-git clone https://github.com/chenchen1010/xhs-note-upload.git "%USERPROFILE%\.claude\skills\xhs-note-upload"
-pip install requests
+Windows:  git clone https://github.com/chenchen1010/xhs-note-upload.git "%USERPROFILE%\.claude\skills\xhs-note-upload"
+macOS:    git clone https://github.com/chenchen1010/xhs-note-upload.git ~/.claude/skills/xhs-note-upload
 ```
 
-**macOS**：
+**用 Codex / Work Buddy 等其它助手**：把仓库 clone 到任意目录，然后把本文顶部那段启动提示词发给助手，它会读 `SKILL.md` 照流程执行。
 
-```
-git clone https://github.com/chenchen1010/xhs-note-upload.git ~/.claude/skills/xhs-note-upload
-pip3 install requests
-```
-
-不想用 git 的话：仓库页面 Code → Download ZIP，解压后把 `xhs-note-upload` 文件夹放进上面路径的 `skills` 目录即可。
+不想用 git 的话：仓库页面 Code → Download ZIP，解压到对应位置即可。
 
 ## 验证（三层，逐层确认）
 
 1. **安装成功**：运行
    `python "%USERPROFILE%\.claude\skills\xhs-note-upload\scripts\xhs_bitable.py" check-config`
    （macOS 用 `python3 ~/.claude/skills/...`）。只要它输出一段 JSON——哪怕是 `CONFIG_NOT_FOUND`——脚本和依赖就已就绪。
-2. **配置成功**：上一步返回 `"ok": true`，且 `note_table_ok`、`settings_table_ok` 都为 true，说明已连上你的表格。找不到配置时，把 config.json 里的表格链接和授权码告诉 Claude，它会用 save-config 帮你保存，以后自动生效。
-3. **上传可用**：对 Claude 说「帮我传一篇测试笔记，传完删掉」。它会走完整链路——校验 → 预览确认 → 写入表格 → 回读核对 → 删除测试记录。这一步通过，才算真正可用。
+2. **配置成功**：上一步返回 `"ok": true`，且 `note_table_ok`、`settings_table_ok` 都为 true，说明已连上你的表格。找不到配置时，把 config.json 里的表格链接和授权码告诉助手，它会用 save-config 帮你保存，以后自动生效。
+3. **上传可用**：对助手说「帮我传一篇测试笔记，传完删掉」。它会走完整链路——校验 → 预览确认 → 写入表格 → 回读核对 → 删除测试记录。这一步通过，才算真正可用。
 
 ## 日常怎么用
 
-| 你想做什么 | 对 Claude 说 |
+| 你想做什么 | 对助手说 |
 | --- | --- |
 | 发一篇笔记 | 帮我发一篇小红书笔记 |
 | 检查队列里的空行/残缺行 | 检查一下待发布队列 |
@@ -74,8 +69,8 @@ pip3 install requests
 
 ## 仓库内文件
 
-- `SKILL.md` — Claude 执行的工作流（Skill 本体）
-- `scripts/xhs_bitable.py` — 后端脚本，全部表格读写都经它，唯一依赖 requests
+- `SKILL.md` — AI 助手执行的工作流（Skill 本体）
+- `scripts/xhs_bitable.py` — 后端脚本，全部表格读写都经它，只用 Python 标准库
 - `references/table-schema.md` — 发布模板的字段基准（含「比特浏览器窗口ID」公式字段的手动重建步骤）
 - `README-客户安装指南.md` — 线下分发给客户的简化版说明
 
