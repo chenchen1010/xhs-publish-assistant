@@ -936,8 +936,7 @@ def cmd_probe_media(args):
                                 "conclusion": "附件直传可用" if ok else "附件直传不可用，将走 fallback（手动拖图）"})
 
 
-def cmd_schema_check(args):
-    ctx = Context(args, need_settings=False)
+def build_schema_report(ctx):
     live = ctx.client.fields(ctx.note_table_id)
     canon_by_name = {c["field_name"]: c for c in CANONICAL_NOTE_FIELDS}
     live_by_name = {}
@@ -990,6 +989,13 @@ def cmd_schema_check(args):
               "healthy": not (renamed_guess or still_missing or type_mismatch)
                          and settings_report.get("exists")
                          and not settings_report.get("missing")}
+    return report, live
+
+
+def cmd_schema_check(args):
+    ctx = Context(args, need_settings=False)
+    report, live = build_schema_report(ctx)
+    canon_by_name = {c["field_name"]: c for c in CANONICAL_NOTE_FIELDS}
 
     if not args.fix:
         emit(args.action, True, data=report)
@@ -1033,8 +1039,7 @@ def cmd_schema_check(args):
                                         "before": report})
 
 
-def cmd_queue_check(args):
-    ctx = Context(args)
+def build_queue_report(ctx):
     acc_map = ctx.settings_accounts()
     records = ctx.client.records(ctx.note_table_id)
     blank, incomplete, complete = [], [], []
@@ -1085,10 +1090,142 @@ def cmd_queue_check(args):
             incomplete.append(info)
         else:
             complete.append(info)
-    emit(args.action, True, data={
+    return {
         "pending_total": len(blank) + len(incomplete) + len(complete),
         "blank": blank, "incomplete": incomplete, "complete": complete,
-        "note": "待发布判定：发布任务提交时间为空 且 已发布未勾选（与 RPA 拉取条件一致）"})
+        "note": "待发布判定：发布任务提交时间为空 且 已发布未勾选（与 RPA 拉取条件一致）"}
+
+
+def cmd_queue_check(args):
+    ctx = Context(args)
+    emit(args.action, True, data=build_queue_report(ctx))
+
+
+def cmd_diagnose(args):
+    """一键配置体检：把常见配置故障逐项查一遍，输出问题清单和修复建议。"""
+    checks, problems = [], []
+
+    def add(item, ok, detail, fix=None):
+        c = {"检查项": item, "ok": ok, "detail": detail}
+        if fix:
+            c["修复建议"] = fix
+        checks.append(c)
+        if not ok:
+            problems.append(c)
+
+    def finish(extra=None):
+        data = {"summary": ("配置检查全部通过，%d 项 OK" % len(checks)) if not problems
+                else "发现 %d 处配置问题（共查 %d 项）" % (len(problems), len(checks)),
+                "checks": checks, "problems": problems}
+        if extra:
+            data.update(extra)
+        emit(args.action, True, data=data)
+
+    # 1. 配置文件
+    path, cfg, candidates = discover_config(getattr(args, "config", None))
+    if candidates:
+        add("配置文件", False, "找到多个可用 config：%s" % "；".join(candidates),
+            "和用户确认该用哪一个，之后所有命令带 --config <路径>")
+        finish()
+    if not cfg:
+        add("配置文件", False, "没有找到有效的 config.json（table_url + pt- 开头的 auth_code）",
+            CONFIG_GUIDANCE)
+        finish()
+    add("配置文件", True, "已找到：%s" % path)
+
+    # 2. 授权码与网络
+    client = BitableClient(cfg["table_url"], cfg["auth_code"])
+    try:
+        tables = client.tables()
+        add("授权码与网络", True, "能正常访问多维表格，共 %d 张表" % len(tables))
+    except BitableError as e:
+        add("授权码与网络", False, "访问表格失败 code=%s: %s" % (e.code, e.msg),
+            "大概率是授权码失效或没有编辑权限：打开多维表格 → 更多 → 高级权限/获取授权码，"
+            "重新生成一个 pt- 授权码，更新到 config.json 的 auth_code。"
+            "若报网络错误，检查电脑能否正常打开 feishu.cn")
+        finish()
+
+    # 3. 两张表
+    table_ids = {t.get("table_id") for t in tables}
+    names = [t.get("name") for t in tables]
+    note_ok = (client.url_table_id in table_ids) or (NOTE_TABLE_NAME in names)
+    add("笔记数据表", note_ok,
+        "存在" if note_ok else "config 里链接指向的表不存在，也没有名为「%s」的表" % NOTE_TABLE_NAME,
+        None if note_ok else "表可能被删除或改名，或 config.json 的 table_url 抄错了："
+                             "核对链接里 ?table= 后面的表，必要时从模板重新复制一份")
+    settings_ok = SETTINGS_TABLE_NAME in names
+    add("设置表", settings_ok,
+        "存在" if settings_ok else "没有名为「设置」的表",
+        None if settings_ok else "「设置」表被删或被改名：改回「设置」，"
+                                 "里面需要 发布账号 / 比特浏览器窗口ID / 是否打开每日数据监控 三个字段")
+    if not note_ok:
+        finish()
+
+    ctx = Context(args, need_settings=False)
+
+    # 4. 模板字段
+    schema, _ = build_schema_report(ctx)
+    if schema["healthy"]:
+        add("模板字段", True, "模板字段齐全，类型正确")
+    else:
+        parts = []
+        for g in schema["renamed_guess"]:
+            if g.get("confidence") == "high":
+                parts.append("「%s」疑似被改名成「%s」" % (g["to"], g["from"]))
+            else:
+                parts.append("「%s」缺失（有多个疑似候选）" % g["to"])
+        if schema["missing"]:
+            parts.append("缺字段：%s" % "、".join(schema["missing"]))
+        for t in schema["type_mismatch"]:
+            parts.append("「%s」类型被改" % t["field"])
+        if schema["settings_table"].get("missing"):
+            parts.append("设置表缺字段：%s" % "、".join(schema["settings_table"]["missing"]))
+        add("模板字段", False, "；".join(parts) or "结构异常",
+            "字段名不能改，RPA 按字段名取数。运行模板体检修复（schema-check --fix）改回；"
+            "类型被改的字段 API 修不了，需在表格里手动改回原类型")
+
+    # 5. 发布账号配置
+    if settings_ok:
+        acc = ctx.settings_accounts()
+        if not acc:
+            add("发布账号配置", False, "「设置」表里一个账号都没有",
+                "在「设置」表添加发布账号（每行一个），并填上对应的比特浏览器窗口ID")
+        else:
+            no_win = [k for k, v in acc.items() if not v]
+            add("发布账号配置", not no_win,
+                "共 %d 个账号：%s%s" % (len(acc), "、".join(acc),
+                                       ("；其中没填窗口ID的：" + "、".join(no_win)) if no_win else ""),
+                None if not no_win else
+                "这些账号没填比特浏览器窗口ID，RPA 无法打开对应浏览器窗口：打开比特浏览器，"
+                "复制各账号窗口的ID，填进「设置」表对应行")
+
+    # 6. 待发布队列
+    q = build_queue_report(ctx)
+    bad = len(q["blank"]) + len(q["incomplete"])
+    add("待发布队列", bad == 0,
+        "待发布 %d 条：空行 %d、残缺 %d、完整 %d" % (q["pending_total"], len(q["blank"]),
+                                                     len(q["incomplete"]), len(q["complete"])),
+        None if bad == 0 else "空行/残缺行会被 RPA 拉走并报错：残缺行补齐信息（update-record），"
+                              "空行经用户确认后删除（delete-records）")
+
+    # 7. 附件直传（可选，会上传一个极小的探测文件）
+    if getattr(args, "probe_media", False):
+        fd, tmp = tempfile.mkstemp(suffix=".png", prefix="xhs_diag_")
+        with os.fdopen(fd, "wb") as f:
+            f.write(TINY_PNG)
+        try:
+            ctx.client.upload_media(tmp, "diag.png", "bitable_image")
+            add("附件直传", True, "授权码可以直传附件")
+        except BitableError as e:
+            add("附件直传", False, "直传失败 code=%s: %s" % (e.code, e.msg),
+                "上传笔记时会走 fallback：记录建好后需手动把图片拖进「封面及配图」单元格")
+        finally:
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+
+    finish({"queue_detail": q})
 
 
 def cmd_update_record(args):
@@ -1290,6 +1427,8 @@ def main():
     sp = sub.add_parser("schema-check", parents=[parent])
     sp.add_argument("--fix", help="修复计划 JSON 文件")
     sub.add_parser("queue-check", parents=[parent])
+    sp = sub.add_parser("diagnose", parents=[parent])
+    sp.add_argument("--probe-media", action="store_true", help="顺带测一次附件直传")
     sp = sub.add_parser("update-record", parents=[parent])
     sp.add_argument("--record-id", required=True)
     sp.add_argument("--payload", required=True)
@@ -1309,6 +1448,7 @@ def main():
         "probe-media": cmd_probe_media,
         "schema-check": cmd_schema_check,
         "queue-check": cmd_queue_check,
+        "diagnose": cmd_diagnose,
         "update-record": cmd_update_record,
         "clean-tags": cmd_clean_tags,
         "delete-records": cmd_delete_records,

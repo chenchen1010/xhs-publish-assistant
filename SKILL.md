@@ -1,6 +1,6 @@
 ---
 name: xhs-note-upload
-description: 小红书笔记上传到飞书多维表格发布队列（影刀RPA自动发布）。Use when the user wants to 发布/上传小红书笔记、把笔记写进多维表格/发布队列, 检查或修复表格模板字段（模板体检）, 清理标签选项, 检查待发布队列/空行（队列体检）, 或提到 影刀发布、发布账号、笔记数据表。Handles title ≤20 chars check with rewrite-confirm, tag splitting into separate multi-select options, image order & attachment upload, account validation against 设置表.
+description: 小红书笔记上传到飞书多维表格发布队列（影刀RPA自动发布）。Use when the user wants to 发布/上传小红书笔记、把笔记写进多维表格/发布队列, 检查或修复表格模板字段（模板体检）, 清理标签选项, 检查待发布队列/空行（队列体检）, 或用户贴出报错/说发布失败/影刀不工作/需要排查问题（故障诊断 diagnose）, 或提到 影刀发布、发布账号、笔记数据表。Handles title ≤20 chars check with rewrite-confirm, tag splitting into separate multi-select options, image order & attachment upload, account validation against 设置表, config-first troubleshooting.
 ---
 
 # 小红书笔记上传（xhs-note-upload）
@@ -50,6 +50,17 @@ description: 小红书笔记上传到飞书多维表格发布队列（影刀RPA�
 1. `python <脚本> queue-check` → 三组结果：`blank`（空行，删除候选）、`incomplete`（残缺行，附各自问题清单）、`complete`。判定口径与 RPA 拉取条件一致：发布任务提交时间为空 且 已发布未勾选。
 2. 残缺行：和用户逐条把缺的信息补齐，写成 patch JSON（只含要改的键；改图片用「文件」键），运行 `update-record --record-id <id> --payload <文件>`。
 3. 空行：先把「标题 + record_id」清单展示给用户，**用户明确确认后**才 `delete-records --ids id1,id2`。
+
+## §5 故障诊断（用户报错 / 说"发布失败、影刀不工作、跑不起来"时）
+
+先读本 skill 目录下的 `references/troubleshooting.md`（内含诊断三条铁律和症状对照表），然后：
+
+1. 让用户把**完整错误信息**贴出来（影刀的报错文字、截图里的文字、或表格「发布任务提交时间」列里出现的错误信息）。已经贴了就直接下一步。
+2. 运行 `python <脚本> diagnose`（怀疑附件问题时加 `--probe-media`），拿到自动体检结果：7 项检查（配置文件/授权码/两张表/模板字段/发布账号/待发布队列/附件直传），每个失败项自带修复建议。
+3. 结合错误信息 + 体检结果 + 症状对照表，给出诊断结论。结论必须落到**具体哪一步配置出了问题**，用普通人能懂的话说：哪里错了 → 怎么改 → 改完怎么验证。
+4. 牢记三条铁律：用户改不了程序（不要建议改代码）；程序本身没问题（不要说"可能是 bug"）；问题 100% 出在配置或漏掉的步骤上。
+5. 能用本 skill 直接修的（字段改名、队列空行/残缺行、标签清理），按 §2–§4 的流程征得确认后帮用户修掉；需要用户在影刀/比特浏览器/表格界面手动操作的，给出逐步指引。
+6. 修复后重跑 `diagnose` 确认全绿，再让用户重试原操作。
 
 ## 硬规则
 

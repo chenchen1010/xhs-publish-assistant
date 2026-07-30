@@ -50,6 +50,7 @@ macOS:    git clone https://github.com/chenchen1010/xhs-note-upload.git ~/.claud
 | 检查队列里的空行/残缺行 | 检查一下待发布队列 |
 | 清理标签里的脏选项 | 清理一下标签选项 |
 | 检查字段是否被改坏 | 检查一下表格模板 |
+| 发布报错/跑不起来 | 把错误信息直接贴给助手，说"帮我看看哪里出问题了" |
 
 它会遵守的规则：
 
@@ -72,6 +73,7 @@ macOS:    git clone https://github.com/chenchen1010/xhs-note-upload.git ~/.claud
 - `SKILL.md` — AI 助手执行的工作流（Skill 本体）
 - `scripts/xhs_bitable.py` — 后端脚本，全部表格读写都经它，只用 Python 标准库
 - `references/table-schema.md` — 发布模板的字段基准（含「比特浏览器窗口ID」公式字段的手动重建步骤）
+- `references/troubleshooting.md` — 故障排查知识库：报错时助手按它诊断是配置的哪一步出了问题
 - `README-客户安装指南.md` — 线下分发给客户的简化版说明
 
 ## 问题反馈
