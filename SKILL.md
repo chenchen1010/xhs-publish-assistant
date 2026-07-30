@@ -1,13 +1,13 @@
 ---
-name: xhs-note-upload
+name: xhs-publish-assistant
 description: 小红书笔记上传到飞书多维表格发布队列（影刀RPA自动发布）。Use when the user wants to 发布/上传小红书笔记、把笔记写进多维表格/发布队列, 检查或修复表格模板字段（模板体检）, 清理标签选项, 检查待发布队列/空行（队列体检）, 或用户贴出报错/说发布失败/影刀不工作/需要排查问题（故障诊断 diagnose）, 或提到 影刀发布、发布账号、笔记数据表。Handles title ≤20 chars check with rewrite-confirm, tag splitting into separate multi-select options, image order & attachment upload, account validation against 设置表, config-first troubleshooting.
 ---
 
-# 小红书笔记上传（xhs-note-upload）
+# 小红书发布助手（xhs-publish-assistant）：笔记上传 + 配置排查
 
 所有对表格的读写都通过本 skill 的脚本完成，脚本路径：本 skill 目录下的
 `scripts\xhs_bitable.py`（下称「脚本」；Claude Code 用户通常位于
-`%USERPROFILE%\.claude\skills\xhs-note-upload\`，其它助手按仓库实际所在目录）。
+`%USERPROFILE%\.claude\skills\xhs-publish-assistant\`，其它助手按仓库实际所在目录）。
 
 每个子命令的 **stdout 是且只是一个 JSON 对象** `{"ok", "action", "data", "errors", "warnings"}`，stderr 是过程日志。只解析 stdout 的 JSON 作为结果；`errors[].message` 已是可直接展示给用户的中文。
 

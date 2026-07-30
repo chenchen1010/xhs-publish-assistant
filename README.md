@@ -1,8 +1,8 @@
-# xhs-note-upload — 小红书笔记上传 Skill
+# xhs-publish-assistant — 小红书发布助手（笔记上传 + 配置排查）
 
 把下面这段话直接复制给你的 AI 编程助手（Claude Code、Codex、Work Buddy 都可以），它会替你完成安装和验证：
 
-> 请安装并使用 https://github.com/chenchen1010/xhs-note-upload 这个仓库的 Skill：把小红书笔记上传到我的飞书多维表格发布队列。只处理我本人电脑上的文件和我自己的表格授权码。请把仓库下载到本地，完成必要的环境检查，然后按仓库里 SKILL.md 的流程执行：先运行 check-config 验证能连上我的表格，找不到配置就引导我提供表格链接和授权码。验证成功后再问我要发布什么笔记。过程中不要上传或打印我的授权码。
+> 请安装并使用 https://github.com/chenchen1010/xhs-publish-assistant 这个仓库的 Skill：小红书发布助手，负责把笔记上传到我的飞书多维表格发布队列，也负责在发布应用报错时帮我排查配置问题。只处理我本人电脑上的文件和我自己的表格授权码。请把仓库下载到本地，完成必要的环境检查，然后按仓库里 SKILL.md 的流程执行：先运行 check-config 验证能连上我的表格，找不到配置就引导我提供表格链接和授权码。验证成功后再问我这次是要发布笔记，还是排查报错。过程中不要上传或打印我的授权码。
 
 ## 它解决什么问题
 
@@ -27,8 +27,8 @@
 **用 Claude Code**：装进 skills 目录后说到发笔记就会自动触发。
 
 ```
-Windows:  git clone https://github.com/chenchen1010/xhs-note-upload.git "%USERPROFILE%\.claude\skills\xhs-note-upload"
-macOS:    git clone https://github.com/chenchen1010/xhs-note-upload.git ~/.claude/skills/xhs-note-upload
+Windows:  git clone https://github.com/chenchen1010/xhs-publish-assistant.git "%USERPROFILE%\.claude\skills\xhs-publish-assistant"
+macOS:    git clone https://github.com/chenchen1010/xhs-publish-assistant.git ~/.claude/skills/xhs-publish-assistant
 ```
 
 **用 Codex / Work Buddy 等其它助手**：把仓库 clone 到任意目录，然后把本文顶部那段启动提示词发给助手，它会读 `SKILL.md` 照流程执行。
@@ -38,7 +38,7 @@ macOS:    git clone https://github.com/chenchen1010/xhs-note-upload.git ~/.claud
 ## 验证（三层，逐层确认）
 
 1. **安装成功**：运行
-   `python "%USERPROFILE%\.claude\skills\xhs-note-upload\scripts\xhs_bitable.py" check-config`
+   `python "%USERPROFILE%\.claude\skills\xhs-publish-assistant\scripts\xhs_bitable.py" check-config`
    （macOS 用 `python3 ~/.claude/skills/...`）。只要它输出一段 JSON——哪怕是 `CONFIG_NOT_FOUND`——脚本和依赖就已就绪。
 2. **配置成功**：上一步返回 `"ok": true`，且 `note_table_ok`、`settings_table_ok` 都为 true，说明已连上你的表格。找不到配置时，把 config.json 里的表格链接和授权码告诉助手，它会用 save-config 帮你保存，以后自动生效。
 3. **上传可用**：对助手说「帮我传一篇测试笔记，传完删掉」。它会走完整链路——校验 → 预览确认 → 写入表格 → 回读核对 → 删除测试记录。这一步通过，才算真正可用。
@@ -79,4 +79,4 @@ macOS:    git clone https://github.com/chenchen1010/xhs-note-upload.git ~/.claud
 
 ## 问题反馈
 
-用下来有问题或想要的功能，欢迎在 [Issues](https://github.com/chenchen1010/xhs-note-upload/issues) 里提~
+用下来有问题或想要的功能，欢迎在 [Issues](https://github.com/chenchen1010/xhs-publish-assistant/issues) 里提~

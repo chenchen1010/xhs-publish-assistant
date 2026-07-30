@@ -1,6 +1,6 @@
-# 小红书笔记上传助手 · 安装与使用指南
+# 小红书发布助手 · 安装与使用指南
 
-这是一个 AI 助手技能（skill），Claude Code、Codex、Work Buddy 都能用。装上以后，你**不需要再手动往多维表格里填笔记**——直接跟 AI 助手说话，它会帮你校验并写进发布队列，影刀会照常自动发布。
+这是一个 AI 助手技能（skill），Claude Code、Codex、Work Buddy 都能用。装上以后：**发笔记不用再手动填表格**——直接跟 AI 助手说话，它会帮你校验并写进发布队列，影刀照常自动发布；**发布报错也不用自己琢磨**——把错误信息贴给助手，它会告诉你是配置的哪一步出了问题、怎么修。
 
 它能帮你避免以前常见的填表错误：
 
@@ -14,7 +14,7 @@
 
 1. 电脑上装好任意一个 AI 编程助手（**Claude Code / Codex / Work Buddy** 都行）和 **Python 3**（Windows 安装时勾选 "Add to PATH"；不需要额外装任何库）。
 2. 放置技能文件夹：
-   - 用 **Claude Code**：把整个 `xhs-note-upload` 文件夹复制到 `C:\Users\你的用户名\.claude\skills\`（最终路径应是 `...\skills\xhs-note-upload\SKILL.md`），以后说到发笔记会自动触发。
+   - 用 **Claude Code**：把整个 `xhs-publish-assistant` 文件夹复制到 `C:\Users\你的用户名\.claude\skills\`（最终路径应是 `...\skills\xhs-publish-assistant\SKILL.md`），以后说到发笔记或排查报错会自动触发。
    - 用 **其它助手**：文件夹放任意位置，把 README.md 顶部那段启动提示词发给助手即可。
 3. 完成。不需要配置任何东西——技能会自动在桌面的「影刀文件夹」里找到你的 config.json；找不到时助手会引导你把 config.json 里的表格链接和授权码告诉它，帮你保存好，以后就不用再管了。
 
