@@ -20,6 +20,7 @@
 - 你已经在用这套发布应用，电脑上有它的 `config.json`（内含表格链接 `table_url` 和 `pt-` 开头的授权码 `auth_code`，通常在 `桌面/影刀文件夹/小红书发布/图文发布/` 里）
 - 任意一个能执行命令的 AI 编程助手：Claude Code / Codex / Work Buddy 等
 - Python 3（脚本只用标准库，**不需要 pip 安装任何第三方库**；macOS 自带 python3，Windows 没有的话让助手帮你装）
+- 可选：Node.js + lark-cli（`npm install -g @larksuite/cli`）——排查疑难问题时，助手用它读取**持续更新的官方配置引导文档**；平时用不到，需要时助手会引导你安装
 
 ## 安装
 
@@ -73,7 +74,7 @@ macOS:    git clone https://github.com/chenchen1010/xhs-note-upload.git ~/.claud
 - `SKILL.md` — AI 助手执行的工作流（Skill 本体）
 - `scripts/xhs_bitable.py` — 后端脚本，全部表格读写都经它，只用 Python 标准库
 - `references/table-schema.md` — 发布模板的字段基准（含「比特浏览器窗口ID」公式字段的手动重建步骤）
-- `references/troubleshooting.md` — 故障排查知识库：报错时助手按它诊断是配置的哪一步出了问题
+- `references/troubleshooting.md` — 故障排查知识库：报错时助手按它诊断是配置的哪一步出了问题。它是[官方配置引导文档](https://gcn6bvkburhk.feishu.cn/docx/UyKwdEUDHoeahdxHVSbcHJ8WnAd)的摘要快照；对照不上的问题，助手会用 lark-cli 读取持续更新的原文档再诊断
 - `README-客户安装指南.md` — 线下分发给客户的简化版说明
 
 ## 问题反馈

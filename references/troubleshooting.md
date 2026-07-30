@@ -55,9 +55,18 @@
 
 影刀社区体验版：第三方分享应用单次运行 10 分钟、单日累计 30 分钟。超时停止不是故障。
 
-## 官方配置引导文档
+## 官方配置引导文档（对照表识别不出来时必读）
 
-原文（含截图和演示视频，用户手动操作时让他对照看）：
+本文件只是原文档的 AI 摘要快照；**原文档会持续更新**（含截图和演示视频，用户手动操作时也让他对照看）：
 https://gcn6bvkburhk.feishu.cn/docx/UyKwdEUDHoeahdxHVSbcHJ8WnAd
 
-遇到本表覆盖不了的新问题：先按「正确配置的完整清单」逐条排查，定位后把新症状和解法反馈给负责人补充进本文件。
+读取最新原文（浏览器抓取/WebFetch 会被飞书拦到登录页，必须用 lark-cli 的 bot 身份）：
+
+```
+lark-cli docs +fetch --doc "https://gcn6bvkburhk.feishu.cn/docx/UyKwdEUDHoeahdxHVSbcHJ8WnAd" --as bot
+```
+
+输出 JSON 的 `data.markdown` 即全文（首行可能混有 deprecated 提示等非 JSON 行，跳过再解析）。
+用户没装 lark-cli：征得同意后 `npm install -g @larksuite/cli`（需要 Node.js），首次使用按 CLI 引导完成初始化——它会自动创建一个应用机器人用于读取，`lark-cli auth status` 里 bot 显示 ready 即可。
+
+遇到本表覆盖不了的新问题：先读最新原文档，再按「正确配置的完整清单」逐条排查；定位后把新症状和解法反馈给负责人补充进本文件。
