@@ -47,7 +47,7 @@ description: 小红书笔记上传到飞书多维表格发布队列（影刀RPA�
 
 ## §4 待发布队列体检
 
-1. `python <脚本> queue-check` → 三组结果：`blank`（空行，删除候选）、`incomplete`（残缺行，附各自问题清单）、`complete`。判定口径与 RPA 拉取条件一致：发布任务提交时间为空 且 已发布未勾选。
+1. `python <脚本> queue-check` → 三组结果：`blank`（空行，删除候选）、`incomplete`（残缺行，附各自问题清单）、`complete`。待发布 = 已发布未勾选；RPA 实际拉取条件：已发布未勾选 且（定时发布为空 = 立即发布，或定时发布距当前北京时间 10 分钟以内）。未发布但「发布任务提交时间」有内容的行会被标为异常（多半是上次运行的报错）。
 2. 残缺行：和用户逐条把缺的信息补齐，写成 patch JSON（只含要改的键；改图片用「文件」键），运行 `update-record --record-id <id> --payload <文件>`。
 3. 空行：先把「标题 + record_id」清单展示给用户，**用户明确确认后**才 `delete-records --ids id1,id2`。
 

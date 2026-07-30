@@ -383,8 +383,9 @@ def cell_list(v):
 
 
 def is_pending(fields):
-    submitted = cell_text(fields.get("发布任务提交时间")).strip()
-    return (not submitted) and (fields.get("已发布") is not True)
+    """RPA 拉取条件（来自官方配置引导文档）：已发布未勾选，且（定时发布为空=立即发布，
+    或定时发布距当前北京时间 10 分钟以内）。队列体检把所有未发布的行都视为待发布。"""
+    return fields.get("已发布") is not True
 
 
 def ms_to_str(ms):
@@ -1085,6 +1086,10 @@ def build_queue_report(ctx):
             if option_is_garbage(cell_text(t)):
                 problems.append("标签「%s…」疑似多个标签合并/正文" % cell_text(t)[:15])
                 break
+        submitted = cell_text(f.get("发布任务提交时间")).strip()
+        if submitted:
+            problems.append("未发布但「发布任务提交时间」有内容，可能是上次运行的报错：%s"
+                            % submitted[:80])
         if problems:
             info["problems"] = problems
             incomplete.append(info)
@@ -1093,7 +1098,8 @@ def build_queue_report(ctx):
     return {
         "pending_total": len(blank) + len(incomplete) + len(complete),
         "blank": blank, "incomplete": incomplete, "complete": complete,
-        "note": "待发布判定：发布任务提交时间为空 且 已发布未勾选（与 RPA 拉取条件一致）"}
+        "note": "待发布=已发布未勾选。RPA 实际拉取：已发布未勾选 且（定时发布为空=立即发布，"
+                "或定时发布距当前北京时间 10 分钟以内）"}
 
 
 def cmd_queue_check(args):
